@@ -11,7 +11,7 @@ import time
 
 class Diffusion():
 
-    def __init__(self, gridsize, D, canal_height = 4, canal_width = 8, canal_wall_thickness = 2, x_padding = 10, y_padding = 20, sample_map=False):
+    def __init__(self, gridsize, D, canal_height = 4, canal_width = 8, canal_wall_thickness = 2, x_padding = 10, y_padding = 20, sample_map=0):
         """
             Initialize: Map, Boundary_type
 
@@ -45,7 +45,7 @@ class Diffusion():
         # Initialize map
         self.sample_map = sample_map
 
-        if self.sample_map:
+        if self.sample_map==1:
 
             pw = int(self.h / self.dx)
             ph = int(self.w / self.dx)
@@ -64,7 +64,25 @@ class Diffusion():
             self.boundary_type[0,:] = 3 * np.ones(ph)
             self.boundary_type[-1,:] = 3 * np.ones(ph)
             self.boundary_type[:,0] = 4 * np.ones(pw)
+        elif self.sample_map==2:
+            
+            pw = int(self.h / self.dx)
+            ph = int(self.w / self.dx)
 
+            print("Map dimensions" + str(pw) + " " + str(ph))
+
+            self.map = np.zeros((pw,ph))
+
+            self.map[:,-1] = np.zeros(pw)
+            self.map[0,:] = np.zeros(ph)
+            self.map[-1,:] = 10 * np.ones(ph)
+            self.map[:,0] = 10 * np.ones(pw)
+
+            self.boundary_type = np.ones(self.map.shape)
+            self.boundary_type[:,-1] = 2 * np.ones(pw)
+            self.boundary_type[0,:] = 2 * np.ones(ph)
+            self.boundary_type[-1,:] = 2 * np.ones(ph)
+            self.boundary_type[:,0] = 2 * np.ones(pw)
         else:
             self.boundary_type = self._generate_geometry()
             self.map = np.zeros(self.boundary_type.shape)
@@ -566,30 +584,13 @@ class Diffusion():
         self.fluxes = loaded["fluxes"]
 
 
-
-def compare_discretization():
-
-    gridsizes = [1, 0.9, 0.8, 0.7, 0.6, 0.5]
-    print(gridsizes)
-    runtimes = []
-
-    for gridsize in gridsizes:
-        d = Diffusion(gridsize=gridsize, D=10, canal_height=10, canal_width=10, sample_map=True)
-        start_time = time.time()
-        d.run(5, timemode=True)
-        end_time = time.time()
-        runtimes.append(end_time-start_time)
-        d.save_map("Sample_Map_Gridsize_varied_"+str(gridsize))
-        plt.plot(d.time, d.mean_value, label="Gridsize "+str(gridsize))
-
-    print(runtimes)
-    plt.legend()
-    plt.show()
-
-
 def main():
-
     #compare_discretization()
+    #compare_profiles()
+
+
+    #height_dependence_plot()
+
     d = Diffusion(gridsize=1, D=10, canal_height=10, canal_width=10, sample_map=True)
     d.load_map("Sample_Map_Gridsize_varied_0.5.npz")
     d.plot_map()
