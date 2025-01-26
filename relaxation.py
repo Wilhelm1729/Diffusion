@@ -4,14 +4,14 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 import matplotlib.gridspec as gridspec
 from copy import deepcopy
-import scipy
+#import scipy
 import sys
 import time
 
 
 class Diffusion():
 
-    def __init__(self, gridsize, D, canal_height = 4, canal_width = 8, canal_wall_thickness = 2, x_padding = 10, y_padding = 20):
+    def __init__(self, gridsize, D, canal_height = 4, canal_width = 8, canal_wall_thickness = 2, x_padding = 10, y_padding = 20, sample_map=False):
         """
             Initialize: Map, Boundary_type
 
@@ -43,20 +43,28 @@ class Diffusion():
         self.x_padding = x_padding
 
         # Initialize map
-        sample_map = False
-        if sample_map:
-            self.map = np.zeros((50,50))
+        self.sample_map = sample_map
 
-            self.map[:,-1] = np.zeros(50)
-            self.map[0,:] = np.zeros(50)
-            self.map[-1,:] = np.zeros(50)
-            self.map[:,0] = np.zeros(50)
+        if self.sample_map:
+
+            pw = int(self.h / self.dx)
+            ph = int(self.w / self.dx)
+
+            print("Map dimensions" + str(pw) + " " + str(ph))
+
+            self.map = np.zeros((pw,ph))
+
+            self.map[:,-1] = np.zeros(pw)
+            self.map[0,:] = np.zeros(ph)
+            self.map[-1,:] = np.zeros(ph)
+            self.map[:,0] = np.zeros(pw)
 
             self.boundary_type = np.ones(self.map.shape)
-            self.boundary_type[:,-1] = 2 * np.ones(50)
-            self.boundary_type[0,:] = 3 * np.ones(50)
-            self.boundary_type[-1,:] = 3 * np.ones(50)
-            self.boundary_type[:,0] = 4 * np.ones(50)
+            self.boundary_type[:,-1] = 2 * np.ones(pw)
+            self.boundary_type[0,:] = 3 * np.ones(ph)
+            self.boundary_type[-1,:] = 3 * np.ones(ph)
+            self.boundary_type[:,0] = 4 * np.ones(pw)
+
         else:
             self.boundary_type = self._generate_geometry()
             self.map = np.zeros(self.boundary_type.shape)
@@ -141,20 +149,28 @@ class Diffusion():
             Calculates the flux through a cross section of the canal at height q in the canal
             where q is normalized between 0 and 1
         """
-        scale = 1 / self.dx
 
-        y = int(scale * (self.b + self.h * (1-q) + self.y_padding))
+        if self.sample_map:
+            y = int(matrix.shape[1] * q)
+            flux = 0
+            for x in range(matrix.shape[0]):
+                flux += self.D * (matrix[x,y] - matrix[x,y-1])
+            return flux
+        else:
+            scale = 1 / self.dx
 
-        xb = int(scale * (2 * self.r + self.x_padding)) - 1
-        xe = int(scale * (2 * self.r + self.x_padding + self.w)) + 1
+            y = int(scale * (self.b + self.h * (1-q) + self.y_padding))
 
-        flux = 0
-        for x in range(xb, xe):
+            xb = int(scale * (2 * self.r + self.x_padding))
+            xe = int(scale * (2 * self.r + self.x_padding + self.w))
 
-            flux += self.D * (matrix[x,y] - matrix[x,y-1]) / self.dx
+            flux = 0
+            for x in range(xb, xe):
 
-        #print(y, xb, xe, flux)
-        return flux
+                flux += self.D * (matrix[x,y] - matrix[x,y-1]) #/ self.dx
+
+            #print(y, xb, xe, flux)
+            return flux
 
     def get_sample(self, matrix, q):
         """
@@ -168,22 +184,25 @@ class Diffusion():
         """
             Calculates and return the mean value of the concentration within the canal
         """
+        if self.sample_map:
+            #TODO Add p q support
+            return matrix[1:-1,1:-1].mean()
+        else:
+            scale = 1 / self.dx
 
-        scale = 1 / self.dx
+            xb = int(scale * (2 * self.r + self.x_padding))
+            xe = int(scale * (2 * self.r + self.x_padding + self.w))
 
-        xb = int(scale * (2 * self.r + self.x_padding)) - 1
-        xe = int(scale * (2 * self.r + self.x_padding + self.w)) + 1
+            yb = int(scale * (self.b + self.h * (1-q) + self.y_padding))
+            ye = int(scale * (self.b + self.r + self.h * (1-p) + self.y_padding))
 
-        yb = int(scale * (self.b + self.h * (1-q) + self.y_padding))
-        ye = int(scale * (self.b + self.r + self.h * (1-p) + self.y_padding))
+            mean_area = matrix[xb:xe+1,yb:ye+1]
+            mask = self.boundary_type[xb:xe+1,yb:ye+1]
+            boolean_mask = mask == 1
 
-        mean_area = matrix[xb:xe+1,yb:ye+1]
-        mask = self.boundary_type[xb:xe+1,yb:ye+1]
-        boolean_mask = mask == 1
-
-        filtered_elements = mean_area[boolean_mask]
-        m = filtered_elements.mean()
-        return m
+            filtered_elements = mean_area[boolean_mask]
+            m = filtered_elements.mean()
+            return m
 
     def relaxation(self, v):
         """
@@ -225,6 +244,49 @@ class Diffusion():
         for x in range(0,xs):
             for y in range(0,ys):
                 v[x,y] = vnew[x,y]
+
+
+    def relaxation_GS(self, v):
+        """
+            Performs one (Gauss-Seidel) relaxation step on the matrix v using the boundary data in self.boundary_type
+        """
+        #vnew = np.zeros(self.map.shape)
+
+        (xs, ys) = self.map.shape
+
+        for x in range(0,xs):
+            for y in range(0,ys):
+                # Inbound relaxation
+                if self.boundary_type[x,y] == 1:
+                    v[x,y] = (v[x-1][y] + v[x+1][y] + v[x][y-1] + v[x][y+1])*0.25
+
+                # Dirichlet condition
+                elif self.boundary_type[x,y] == 2:
+                    v[x,y] = v[x,y]
+
+                elif self.boundary_type[x,y] == 3 or self.boundary_type[x,y] == 4:
+                    
+                    ydir = 0
+                    xdir = 0
+                    # This does not work for complicated boundary conditions but will work for now
+                    if x+1 < xs and self.boundary_type[x+1,y] == 1: xdir +=1
+                    if x-1 >= 0 and self.boundary_type[x-1,y] == 1: xdir -= 1
+                    if y+1 < ys and self.boundary_type[x,y+1] == 1: ydir += 1
+                    if y-1 >= 0 and self.boundary_type[x,y-1] == 1: ydir -= 1
+                
+                    V_in = v[x + xdir,y + ydir]
+                    
+                    if self.boundary_type[x,y] == 3:
+                        # Neumann condition
+                        v[x,y] = V_in
+                    else:
+                        # Robin condition
+                        v[x,y] = (V_in + self.K * self.dx * self.V_0) / (1 + self.K * self.dx)
+        
+        #for x in range(0,xs):
+        #    for y in range(0,ys):
+        #        v[x,y] = vnew[x,y]
+
 
     def animate_heatmap(self, nsteps=10000):
         """
@@ -505,37 +567,36 @@ class Diffusion():
 
 
 
-
 def compare_discretization():
-    
 
-    gridsizes = [0.2, 0.4, 0.5, 0.7, 1]
+    gridsizes = [1, 0.9, 0.8, 0.7, 0.6, 0.5]
+    print(gridsizes)
     runtimes = []
 
     for gridsize in gridsizes:
-        d = Diffusion(gridsize=gridsize, D=10)
+        d = Diffusion(gridsize=gridsize, D=10, canal_height=10, canal_width=10, sample_map=True)
         start_time = time.time()
         d.run(5, timemode=True)
         end_time = time.time()
         runtimes.append(end_time-start_time)
-        d.save_map("Gridsize_varied_"+str(gridsize))
+        d.save_map("Sample_Map_Gridsize_varied_"+str(gridsize))
         plt.plot(d.time, d.mean_value, label="Gridsize "+str(gridsize))
 
     print(runtimes)
     plt.legend()
     plt.show()
-        
-        
-
 
 
 def main():
-    d = Diffusion(0.5,10, y_padding=30,x_padding=15)
-    d.load_map("Gridsize_varied_0.2.npz")
-    d.plot_map()
-
 
     #compare_discretization()
+    d = Diffusion(gridsize=1, D=10, canal_height=10, canal_width=10, sample_map=True)
+    d.load_map("Sample_Map_Gridsize_varied_0.5.npz")
+    d.plot_map()
+
+    #d = Diffusion(0.5,10, y_padding=30,x_padding=15)
+    #d.load_map("Gridsize_varied_0.2.npz")
+    #d.plot_map()
 
     #d.load_map("test.npz")
 
@@ -543,7 +604,7 @@ def main():
     #d.plot_map()
 
     #d.animate()
-    #d.run(2, timemode=True)
+    #d.run(40, timemode=True)
     #d.save_map("test")
     #d.plot_map()
     #d.generate_geometry(show=True)
