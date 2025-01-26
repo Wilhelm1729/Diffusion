@@ -62,6 +62,65 @@ def height_dependence_plot():
     plt.savefig("height_variation.png")
     plt.show()
 
+def width_dependence():
+
+    widths = [4,8,12,16,20,24,28,32]
+    flux = []
+    
+    for width in widths:
+        d = relaxation.Diffusion(1,10, canal_width=width,y_padding=30,x_padding=15)
+        d.run_till_steady_state(0.01)
+        d.save_map("width_"+str(width)+"_dx_"+str(1)+"_tol_"+str(0.01))
+        flux.append(d.fluxes[2][-1])
+        #d.plot_map()
+
+    np.save("flux_w_1_0.01", np.array(flux))
+
+    plt.plot(widths, flux)
+    plt.title("Flux out of canal for different widths")
+    plt.xlabel("width [mm]")
+    plt.ylabel("Flux [g/s]")
+    plt.show()
+
+def width_dependence_plot():
+
+    fst = 13
+    fs = 12
+
+    widths = np.array([4,8,12,16,20,24,28,32])
+    flux = np.load("flux_w_1_0.01.npy")
+
+    fig = plt.figure(figsize=(10,5))
+    gs = gridspec.GridSpec(1,2)
+
+    ax1 = fig.add_subplot(gs[0,0])
+    ax2 = fig.add_subplot(gs[0,1])
+    
+    ax1.plot(widths, flux / widths)
+    ax1.set_title("Flux out of canal for different widths", fontsize = fst)
+    ax1.set_xlabel("Canal width [mm]", fontsize = fs)
+    ax1.set_ylabel("Flux [g/s$\cdot$mm]", fontsize = fs)
+
+    log_f = np.log(flux / widths)
+    log_w = np.log(widths)
+
+    slope = 0
+    c = 0
+    for index in range(0,len(log_f)-1):
+        c+=1
+        slope += (log_f[index+1]-log_f[index]) / (log_w[index+1]-log_w[index])
+    slope = slope / c
+
+    print(slope)
+
+    ax2.loglog(widths, flux / widths)
+    ax2.set_title("Flux out of canal for different widths (loglog)", fontsize = fst)
+    ax2.set_xlabel("Canal width [mm]", fontsize = fs)
+    ax2.set_ylabel("Flux [g/s$\cdot$mm]", fontsize = fs)
+
+    plt.tight_layout()
+    plt.savefig("width_variation.png")
+    plt.show()
 
 ### To study dx-dependence
 
@@ -209,7 +268,7 @@ def plot_runtime():
 
 def main():
 
-    height_dependence_plot()
+    width_dependence_plot()
 
 
 
