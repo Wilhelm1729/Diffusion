@@ -156,8 +156,9 @@ class Diffusion():
     
         if show == True:
             plt.imshow(matrix.transpose(), cmap='viridis', interpolation='nearest')
-            plt.colorbar()  # Add a color bar to indicate the scale
-            plt.title("Matrix Visualization")
+            #plt.colorbar()  # Add a color bar to indicate the scale
+            plt.title("Matrix Visualization", fontsize=16)
+            plt.savefig("Geometry_" + str(self.dx) +".png")
             plt.show()
 
         return matrix
@@ -547,6 +548,23 @@ class Diffusion():
         plt.tight_layout()
         plt.show()
 
+    def plot_only_map(self):
+        """
+            Plot the map in the object.
+        """
+        fig = plt.figure(figsize=(10,6))
+        gs = gridspec.GridSpec(1,1)
+
+        ax = fig.add_subplot(gs[0,0])
+        im = ax.imshow(self.map.transpose(), cmap=None, interpolation='nearest', vmin = 0, vmax=10)
+        fig.colorbar(im, ax=ax)
+        ax.set_title("Steady-state concentration", fontsize=16)
+        ax.tick_params(axis='both', which='both', length=0, labelbottom=False, labelleft=False)
+  
+        plt.tight_layout()
+        plt.savefig("Sample.png")
+        plt.show()
+
     def save_map(self, filename):
         """
             Saves the object.
@@ -591,11 +609,15 @@ def main():
 
     #height_dependence_plot()
 
-    d = Diffusion(gridsize=1, D=10, canal_height=10, canal_width=10, sample_map=True)
-    d.load_map("Sample_Map_Gridsize_varied_0.5.npz")
-    d.plot_map()
+    #d = Diffusion(gridsize=1, D=10, canal_height=10, canal_width=10)
+    #d.load_map("Sample_Map_2_Gridsize_varied_0.2.npz")
+    #d.plot_only_map()
 
-    #d = Diffusion(0.5,10, y_padding=30,x_padding=15)
+    d = Diffusion(0.5,10, y_padding=20,x_padding=15)
+    #d.run_till_steady_state(0.01)
+    d.load_map("steady_state.npz")
+    d.plot_only_map()
+    #d._generate_geometry(show=True)
     #d.load_map("Gridsize_varied_0.2.npz")
     #d.plot_map()
 

@@ -28,21 +28,38 @@ def height_dependence():
 
     plt.plot(heights, flux)
     plt.title("Flux out of canal for different heights")
-    plt.xlabel("Heights")
-    plt.ylabel("Flux")
+    plt.xlabel("Height [mm]")
+    plt.ylabel("Flux [g/s]")
     plt.show()
 
 def height_dependence_plot():
 
+    fst = 13
+    fs = 12
+
     heights = np.array([0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60])
     flux = np.load("flux_1_0.01.npy")
+
+    fig = plt.figure(figsize=(10,5))
+    gs = gridspec.GridSpec(1,2)
+
+    ax1 = fig.add_subplot(gs[0,0])
+    ax2 = fig.add_subplot(gs[0,1])
     
     #plt.semilogy(heights, flux1)
-    plt.loglog(heights, 800/heights)
-    plt.loglog(heights, flux)
-    plt.title("Flux out of canal for different heights")
-    plt.xlabel("Heights")
-    plt.ylabel("Flux")
+    #plt.loglog(heights, 800/heights)
+    ax1.plot(heights, flux)
+    ax1.set_title("Flux out of canal for different heights", fontsize = fst)
+    ax1.set_xlabel("Canal height [mm]", fontsize = fs)
+    ax1.set_ylabel("Flux [g/s]", fontsize = fs)
+
+    ax2.plot(heights, 1/flux)
+    ax2.set_title("Reciprocal flux out of canal for different heights", fontsize = fst)
+    ax2.set_xlabel("Canal height [mm]", fontsize = fs)
+    ax2.set_ylabel("1/Flux [s/g]", fontsize = fs)
+
+    plt.tight_layout()
+    plt.savefig("height_variation.png")
     plt.show()
 
 
@@ -144,10 +161,6 @@ def compare_profiles():
     fig.savefig("Error.png")
     fig.show()
 
-
-
-
-
 def plot_runtime():
 
     fs = 14
@@ -192,31 +205,12 @@ def plot_runtime():
     plt.show()
 
 
+
+
 def main():
-    #compare_discretization()
-    compare_profiles()
 
+    height_dependence_plot()
 
-    #height_dependence_plot()
-
-    #d = Diffusion(gridsize=1, D=10, canal_height=10, canal_width=10, sample_map=True)
-    #d.load_map("Sample_Map_Gridsize_varied_0.5.npz")
-    #d.plot_map()
-
-    #d = Diffusion(0.5,10, y_padding=30,x_padding=15)
-    #d.load_map("Gridsize_varied_0.2.npz")
-    #d.plot_map()
-
-    #d.load_map("test.npz")
-
-    #d.run_till_steady_state(0.1)
-    #d.plot_map()
-
-    #d.animate()
-    #d.run(40, timemode=True)
-    #d.save_map("test")
-    #d.plot_map()
-    #d.generate_geometry(show=True)
 
 
 
