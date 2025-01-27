@@ -258,54 +258,11 @@ class Diffusion():
                         vnew[x,y] = V_in
                     else:
                         # Robin condition
-                        vnew[x,y] = (V_in + self.K * self.dx * self.V_0) / (1 + self.K * self.dx)
+                        vnew[x,y] = (V_in + self.K / self.D * self.dx * self.V_0) / (1 + self.K / self.D * self.dx)
         
         for x in range(0,xs):
             for y in range(0,ys):
                 v[x,y] = vnew[x,y]
-
-
-    def relaxation_GS(self, v):
-        """
-            Performs one (Gauss-Seidel) relaxation step on the matrix v using the boundary data in self.boundary_type
-        """
-        #vnew = np.zeros(self.map.shape)
-
-        (xs, ys) = self.map.shape
-
-        for x in range(0,xs):
-            for y in range(0,ys):
-                # Inbound relaxation
-                if self.boundary_type[x,y] == 1:
-                    v[x,y] = (v[x-1][y] + v[x+1][y] + v[x][y-1] + v[x][y+1])*0.25
-
-                # Dirichlet condition
-                elif self.boundary_type[x,y] == 2:
-                    v[x,y] = v[x,y]
-
-                elif self.boundary_type[x,y] == 3 or self.boundary_type[x,y] == 4:
-                    
-                    ydir = 0
-                    xdir = 0
-                    # This does not work for complicated boundary conditions but will work for now
-                    if x+1 < xs and self.boundary_type[x+1,y] == 1: xdir +=1
-                    if x-1 >= 0 and self.boundary_type[x-1,y] == 1: xdir -= 1
-                    if y+1 < ys and self.boundary_type[x,y+1] == 1: ydir += 1
-                    if y-1 >= 0 and self.boundary_type[x,y-1] == 1: ydir -= 1
-                
-                    V_in = v[x + xdir,y + ydir]
-                    
-                    if self.boundary_type[x,y] == 3:
-                        # Neumann condition
-                        v[x,y] = V_in
-                    else:
-                        # Robin condition
-                        v[x,y] = (V_in + self.K * self.dx * self.V_0) / (1 + self.K * self.dx)
-        
-        #for x in range(0,xs):
-        #    for y in range(0,ys):
-        #        v[x,y] = vnew[x,y]
-
 
     def animate_heatmap(self, nsteps=10000):
         """
@@ -548,7 +505,7 @@ class Diffusion():
         plt.tight_layout()
         plt.show()
 
-    def plot_only_map(self):
+    def plot_only_map(self, name):
         """
             Plot the map in the object.
         """
@@ -562,7 +519,7 @@ class Diffusion():
         ax.tick_params(axis='both', which='both', length=0, labelbottom=False, labelleft=False)
   
         plt.tight_layout()
-        plt.savefig("Sample.png")
+        plt.savefig(name + ".png")
         plt.show()
 
     def save_map(self, filename):
@@ -603,35 +560,10 @@ class Diffusion():
 
 
 def main():
-    #compare_discretization()
-    #compare_profiles()
-
-
-    #height_dependence_plot()
-
-    #d = Diffusion(gridsize=1, D=10, canal_height=10, canal_width=10)
-    #d.load_map("Sample_Map_2_Gridsize_varied_0.2.npz")
-    #d.plot_only_map()
-
+    # Sample run
     d = Diffusion(0.5,10, y_padding=20,x_padding=15)
-    #d.run_till_steady_state(0.01)
-    d.load_map("steady_state.npz")
-    d.plot_only_map()
-    #d._generate_geometry(show=True)
-    #d.load_map("Gridsize_varied_0.2.npz")
-    #d.plot_map()
-
-    #d.load_map("test.npz")
-
-    #d.run_till_steady_state(0.1)
-    #d.plot_map()
-
-    #d.animate()
-    #d.run(40, timemode=True)
-    #d.save_map("test")
-    #d.plot_map()
-    #d.generate_geometry(show=True)
-
+    d.run_till_steady_state(0.01)
+    d.plot_map()
 
 
 if __name__ == "__main__":
